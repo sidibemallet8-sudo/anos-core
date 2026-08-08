@@ -4,36 +4,37 @@ ANOS est un système d'exploitation léger, sécurisé et isolé basé sur Docke
 
 ---
 
-## 🛠️ Guide d'installation et d'utilisation pour les débutants
+## 🛠️ Guide d'installation et d'utilisation
 
-Si vous découvrez le projet et souhaitez l'installer sur votre machine, suivez ces étapes pas à pas dans votre terminal :
+Suivez ces étapes dans votre terminal pour installer et configurer ANOS sur votre machine :
 
-### 1. Télécharger le projet sur votre ordinateur
-Ouvrez votre terminal et tapez ces commandes pour cloner le dépôt :
+### 1. Télécharger le projet
 ```bash
 git clone [https://github.com/sidibemallet8-sudo/anos-core.git](https://github.com/sidibemallet8-sudo/anos-core.git)
 cd anos-core
-### 2. Construire l’image système personnalisée (⚠️ Étape obligatoire)
-Cette étape permet de fabriquer l’environnement avec tous les outils pré-intégrés. Tapez cette commande :
 
+### 2. Construire l’image système
 Bash
 sudo docker build -t anos-custom:v1 .
 
-### 3. Installer la commande globale (Optionnel mais recommandé)
-Pour pouvoir lancer le système rapidement depuis n’importe quel dossier :
+### 3. Installer la commande globale
+
+Pour pouvoir lancer ANOS instantanément depuis n’importe quel dossier de votre terminal :
 
 Bash
 chmod +x anos
 sudo cp anos /usr/local/bin/anos
 
-### 4. Lancer le système d’exploitation ANOS
-Une fois l’installation terminée, tapez simplement votre commande magique :
+### 4. Utilisation
+Ouvrez votre terminal, peu importe où vous vous trouvez, et tapez simplement :
 
 Bash
 anos
-(Ou exécutez directement le script Python si vous ne l’avez pas installé globalement : python3 lancer_bulle.py)
 
-### 5. Utilisation à l’intérieur de la bulle
-Pour vous anonymiser : tapez tor
+### 5. Commandes utiles à l’intérieur d’ANOS
 
-Pour quitter le système : tapez exit
+Pour activer l’anonymisation : tapez tor
+Pour quitter et nettoyer la bulle : tapez exit
+pour installer un outils tapez anos install avec le nom de loutils
+
+
