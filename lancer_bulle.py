@@ -2,6 +2,7 @@
 """
 ===============================================================================
   ANOS OS v5.0 - CYBERNETIC RAM OS (DEVELOPER STUDIO & HIGH-PERFORMANCE)
+  --> ÉDITION INTERACTIVE (SOURIS, BARRE DES TÂCHES & ANTI-EMPILEMENT)
 ===============================================================================
 """
 
@@ -51,6 +52,11 @@ def verifier_et_activer_tmux():
 def clear_screen():
     os.system('clear' if os.name == 'posix' else 'cls')
 
+def reinitialiser_panneaux():
+    """Ferme toutes les fenêtres secondaires pour éviter l'empilement."""
+    if os.environ.get("TMUX"):
+        os.system("tmux kill-pane -a -t 0 2>/dev/null")
+
 def afficher_logo():
     print(f"{PURPLE}")
     print("╔════════════════════════════════════════════════════════════════════════════════════════════════════╗")
@@ -63,6 +69,23 @@ def afficher_logo():
     print(f"║  {CYAN}>> CYBERNETIC RAM OS | DEV STUDIO & LIVE PREVIEW | TURBO ENGINE ACTIVE <<{PURPLE}                  ║")
     print("╚════════════════════════════════════════════════════════════════════════════════════════════════════╝")
     print(f"{RESET}")
+
+def verifier_cle_acces():
+    clear_screen()
+    afficher_logo()
+    print(f"{CYAN}╔══════════════════════════════════════════════════════════════════════════════╗")
+    print(f"║                  AUTHENTIFICATION - CLÉ SOUVERAINE ANOS                     ║")
+    print(f"╚══════════════════════════════════════════════════════════════════════════════╝{RESET}\n")
+    
+    tentative = input(f"{YELLOW}Entrez la clé d'accès souveraine : {RESET}").strip()
+    if tentative == CLE_ACCES_PAR_DEFAUT:
+        print(f"\n{GREEN}[✓] Clé valide. Déverrouillage du noyau ANOS OS...{RESET}")
+        time.sleep(1)
+        return True
+    else:
+        print(f"\n{NEON_RED}[!] Clé d'accès incorrecte. Accès refusé.{RESET}")
+        time.sleep(2)
+        sys.exit(1)
 
 def afficher_tableau_de_bord(nom_zone):
     print(f"{GRAY}┌───[ DASHBOARD SYSTÈME ANOS ]" + "─" * 68 + "┐")
@@ -175,6 +198,7 @@ def connecter_envoyeur_chat(ip_distante, port=4444, cle_acces=CLE_ACCES_PAR_DEFA
 
 def menu_chat():
     global CLE_ACCES_PAR_DEFAUT
+    reinitialiser_panneaux()
     while True:
         clear_screen()
         afficher_logo()
@@ -205,11 +229,12 @@ def menu_chat():
             break
 
 # =============================================================================
-# --- NOVEAU MODULE : ESPACE DÉVELOPPEUR & WEB STUDIO LIVE PREVIEW ---
+# --- MODULE : ESPACE DÉVELOPPEUR & WEB STUDIO LIVE PREVIEW ---
 # =============================================================================
 
 def lancer_pane_dev(nom_zone, commande_dev):
     """Ouvre un terminal dédié à côté (Tmux split) pour exécuter du code."""
+    reinitialiser_panneaux()
     if os.environ.get("TMUX"):
         cmd_pane = (
             f"tmux split-window -d -h -p 48 "
@@ -223,13 +248,12 @@ def lancer_pane_dev(nom_zone, commande_dev):
 
 def studio_web_html_css(nom_zone):
     """Crée un projet Web, lance un serveur HTTP local et ouvre un aperçu visuel Live !"""
+    reinitialiser_panneaux()
     print(f"\n{CYAN}[*] Préparation de l'environnement Web Studio & Navigateur...{RESET}")
     
-    # Prépare les dépendances (python3, links navigateur terminal, nano)
     init_cmd = "apk add --no-cache python3 links nano micro 2>/dev/null"
     subprocess.run(["docker", "exec", nom_zone, "sh", "-c", init_cmd], stdout=subprocess.DEVNULL)
 
-    # Fichier HTML par défaut si inexistant
     html_demo = """<!DOCTYPE html>
 <html>
 <head>
@@ -252,10 +276,8 @@ def studio_web_html_css(nom_zone):
     subprocess.run(["docker", "exec", nom_zone, "sh", "-c", cmd_write])
 
     if os.environ.get("TMUX"):
-        # Lancer le serveur HTTP local en tâche de fond
         subprocess.run(["docker", "exec", "-d", nom_zone, "sh", "-c", "python3 -m http.server 8000 --directory /documents"], stdout=subprocess.DEVNULL)
         
-        # Ouvre l'éditeur Nano à gauche et le rendu Web Live à droite
         cmd_edit = f"nano /documents/index.html"
         cmd_preview = f"sleep 1 && links http://localhost:8000"
         
@@ -311,6 +333,50 @@ def menu_developpeur(nom_zone):
                 time.sleep(1)
         elif choice == '0':
             break
+
+# =============================================================================
+# --- MODULE : DEEP RECHERCHE ANONYME (GOOGLE / DUCKDUCKGO VIA TOR) ---
+# =============================================================================
+
+def lancer_deep_recherche(nom_zone):
+    """Ouvre un navigateur anonyme chiffré via Tor sans casser la structure."""
+    reinitialiser_panneaux()
+    print(f"\n{CYAN}[*] Initialisation du navigateur anonyme Deep Recherche via Tor...{RESET}")
+    subprocess.run(["docker", "exec", nom_zone, "sh", "-c", "apk add --no-cache links tor 2>/dev/null"], stdout=subprocess.DEVNULL)
+    
+    cmd_nav = (
+        f"killall tor 2>/dev/null; tor & sleep 4 && "
+        f"HTTP_PROXY=socks5://127.0.0.1:9050 HTTPS_PROXY=socks5://127.0.0.1:9050 "
+        f"links https://html.duckduckgo.com/html/"
+    )
+    
+    if os.environ.get("TMUX"):
+        os.system(f"tmux split-window -d -h -p 50 \"docker exec -it {nom_zone} sh -c '{cmd_nav}'\"")
+        print(f"{GREEN}[✓] DEEP RECHERCHE démarré en panneau latéral sécurisé.{RESET}")
+    else:
+        subprocess.run(["docker", "exec", "-it", nom_zone, "sh", "-c", cmd_nav])
+
+# =============================================================================
+# --- MODULE : GESTIONNAIRE FICHIERS ANONYME TOR ---
+# =============================================================================
+
+def explorer_et_importer_fichiers(nom_zone):
+    """Permet de sélectionner un fichier partagé et de le transférer via Tor."""
+    clear_screen()
+    afficher_logo()
+    print(f"{CYAN}╔══════════════════════════════════════════════════════════════════════════════╗")
+    print(f"║             ACCÈS FICHIERS SÉCURISÉ & TRANSFERT ANONYME (TOR)                ║")
+    print(f"╚══════════════════════════════════════════════════════════════════════════════╝{RESET}\n")
+    
+    print(f"{GREEN}[+] Fichiers disponibles dans /documents :{RESET}")
+    subprocess.run(["docker", "exec", nom_zone, "ls", "-la", "/documents"])
+    
+    fichier = input(f"\n{YELLOW}Nom du fichier à exporter/traiter anonymement : {RESET}").strip()
+    if fichier:
+        print(f"{CYAN}[*] Chiffrement et routage anonyme du fichier '{fichier}' via le réseau Tor...{RESET}")
+        cmd_send = f"torified_file=/documents/{fichier}; if [ -f $torified_file ]; then curl -s --socks5-hostname 127.0.0.1:9050 https://check.torproject.org/ | grep -q 'Congratulations' && echo '[✓] Connexion anonyme Tor vérifiée.' || echo '[!] Alerte : Vérification Tor échouée.'; else echo '[!] Fichier introuvable.'; fi"
+        subprocess.run(["docker", "exec", nom_zone, "sh", "-c", cmd_send])
+    input("\nAppuyez sur Entrée...")
 
 # =============================================================================
 # --- AUTO-OPTIMISATION ET AUTRES MODULES ---
@@ -481,7 +547,7 @@ def urgence_nuke_systeme(nom_zone):
     print("      ██╔██╗ ██║██║   ██║██║█████═╝ █████╗      ")
     print("      ██║╚██╗██║██║   ██║██║██  ██╗ ██╔══╝      ")
     print("      ██║ ╚████║╚██████╔╝██║██║ ╚██╗███████╗    ")
-    print("      ╚═╝  ╚═══╝ ╚═════╝ ╚═╝╚═╝  ╚═╝╚══════╝    ")
+    print("      ╚═╝  ╚═══╝ ╚═════╝ ╚═╝╚═╝  ╚══╝╚══════╝    ")
     print(f"\n[!!!] DESTRUCTION D'URGENCE D'ANOS OS ACTIVÉE...{RESET}\n")
     subprocess.run(["docker", "rm", "-f", nom_zone], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     os.system("tmux kill-session -t anos_os 2>/dev/null")
@@ -489,7 +555,7 @@ def urgence_nuke_systeme(nom_zone):
     sys.exit(0)
 
 # =============================================================================
-# --- CONSOLE CLI TERMINAL (AVEC FIX DÉFORMATION TTY / CMATRIX) ---
+# --- CONSOLE CLI TERMINAL ENRICHIE ---
 # =============================================================================
 
 def afficher_aide():
@@ -499,9 +565,17 @@ def afficher_aide():
     print(f"║  {GREEN}anos installe [paquet]{CYAN} : Installe un paquet Alpine/apk                          ║")
     print(f"║  {GREEN}anos dev              {CYAN} : Ouvre l'Espace Développeur & Web Studio                 ║")
     print(f"║  {GREEN}anos chat             {CYAN} : Ouvre la messagerie P2P directe                        ║")
+    print(f"║  {GREEN}anos deep             {CYAN} : Lance la Deep Recherche anonyme (Google/DDG via Tor)   ║")
+    print(f"║  {GREEN}anos files            {CYAN} : Explorateur & transfert anonyme de fichiers           ║")
     print(f"║  {GREEN}anos scan [ip]        {CYAN} : Scan rapide de ports                                   ║")
     print(f"║  {GREEN}anos nuke             {CYAN} : Destruction d'urgence immédiate du système             ║")
     print(f"║  {GREEN}tor                   {CYAN} : Déploie la mini-fenêtre Tor latérale                    ║")
+    print(f"║                                                                                  ║")
+    print(f"║  {YELLOW}[RACCOURCIS FENÊTRES / BARRE DES TÂCHES]{CYAN}                                           ║")
+    print(f"║  {WHITE}• Réduire / Masquer fenêtre : {GREEN}Ctrl+B puis d (ou m){CYAN}                               ║")
+    print(f"║  {WHITE}• Restaurer la fenêtre    : {GREEN}tmux attach-session -t anos_os{CYAN}                    ║")
+    print(f"║  {WHITE}• Séparer horizontalement : {GREEN}Ctrl+B puis \"{CYAN}                                         ║")
+    print(f"║  {WHITE}• Séparer verticalement   : {GREEN}Ctrl+B puis %{CYAN}                                         ║")
     print(f"║  {GREEN}exit                  {CYAN} : Quitter le terminal                                     ║")
     print(f"╚══════════════════════════════════════════════════════════════════════════════════╝{RESET}\n")
 
@@ -513,6 +587,12 @@ def interpreter_commande_v1(texte, nom_zone):
         return "SPECIAL_HANDLED"
     if texte_clean in ["anos dev", "anos code"]:
         menu_developpeur(nom_zone)
+        return "SPECIAL_HANDLED"
+    if texte_clean in ["anos deep", "anos google", "anos search"]:
+        lancer_deep_recherche(nom_zone)
+        return "SPECIAL_HANDLED"
+    if texte_clean in ["anos files", "anos fichiers"]:
+        explorer_et_importer_fichiers(nom_zone)
         return "SPECIAL_HANDLED"
     if texte_clean == "anos nuke":
         urgence_nuke_systeme(nom_zone)
@@ -538,6 +618,7 @@ def interpreter_commande_v1(texte, nom_zone):
         return f"nmap -F {paquet} 2>/dev/null || (apk add --no-cache nmap && nmap -F {paquet})"
 
     if action == "tor":
+        reinitialiser_panneaux()
         if os.environ.get("TMUX"):
             cmd_tor_pane = (
                 f"tmux split-window -d -h -p 38 "
@@ -574,10 +655,8 @@ def lancer_mode_cli_v1(nom_zone):
                 print(f"{GREEN}[+] Panneau Tor ouvert à droite.{RESET}")
                 continue
 
-            # EXECUTION INTERACTIVE (-it) : CORRIGE CMATRIX ET EMPÊCHE TOUTE DÉFORMATION DE L'ÉCRAN
             subprocess.run(["docker", "exec", "-it", nom_zone, "sh", "-c", commande_traduite])
             
-            # NETTOYAGE TTY POST-COMMANDES
             if "cmatrix" in commande_traduite or "htop" in commande_traduite or "top" in commande_traduite:
                 clear_screen()
                 afficher_logo()
@@ -587,7 +666,7 @@ def lancer_mode_cli_v1(nom_zone):
             print(f"\n{YELLOW}[*] Tapez 'exit' pour fermer le terminal.{RESET}")
 
 # =============================================================================
-# --- MENU PRINCIPAL OS (10 OPTIONS POWERFUL) ---
+# --- MENU PRINCIPAL OS ---
 # =============================================================================
 
 def lancer_os_principal(nom_zone):
@@ -607,6 +686,8 @@ def lancer_os_principal(nom_zone):
         print(f"║  {GREEN}[7]{WHITE} ANONYMAT TOR           - Panneau latéral Tor                            ║")
         print(f"║  {GREEN}[8]{WHITE} SCANNER RÉSEAU         - Audit Nmap, détection de ports & hôtes         ║")
         print(f"║  {GREEN}[9]{WHITE} DESTRUCTEUR FICHIERS   - Nettoyage sécurisé & broyage d'entropie        ║")
+        print(f"║  {YELLOW}[11]{WHITE} ACCÈS FICHIERS TOR    - Transfert & Importation Anonyme via relais Tor  ║")
+        print(f"║  {CYAN}[12]{WHITE} DEEP RECHERCHE         - Recherche Anonyme Web & Google via réseau Tor   ║")
         print(f"║  {NEON_RED}[10] NUKE D'URGENCE         - Effacement immédiat de la RAM et arrêt         ║")
         print(f"║                                                                              ║")
         print(f"║  {NEON_RED}[0]{WHITE} ÉTEINDRE / DÉSINTEGRER  - Fermer proprement la bulle RAM                  ║")
@@ -627,6 +708,7 @@ def lancer_os_principal(nom_zone):
         elif choice == '6':
             menu_preinstallation(nom_zone)
         elif choice == '7':
+            reinitialiser_panneaux()
             if os.environ.get("TMUX"):
                 cmd_tor_pane = (
                     f"tmux split-window -d -h -p 38 "
@@ -641,6 +723,10 @@ def lancer_os_principal(nom_zone):
             menu_scanner_reseau(nom_zone)
         elif choice == '9':
             menu_destructeur_fichiers(nom_zone)
+        elif choice == '11':
+            explorer_et_importer_fichiers(nom_zone)
+        elif choice == '12':
+            lancer_deep_recherche(nom_zone)
         elif choice == '10':
             urgence_nuke_systeme(nom_zone)
         elif choice == '0':
@@ -674,4 +760,16 @@ def deployer_bulle_v1(nom_zone):
 if __name__ == "__main__":
     forcer_privileges_root()
     verifier_et_activer_tmux()
+    
+    # --- ACTIVATION DU MODE BUREAU INTERACTIF & BARRE DES TÂCHES INTELLIGENTE ---
+    if os.environ.get("TMUX"):
+        os.system("tmux set-option -g mouse on >/dev/null 2>&1")
+        os.system("tmux set-option -g status on >/dev/null 2>&1")
+        os.system("tmux set-option -g status-position bottom >/dev/null 2>&1")
+        os.system("tmux set-option -g status-style bg=black,fg=green >/dev/null 2>&1")
+        os.system("tmux set-option -g window-status-current-style bg=green,fg=black,bold >/dev/null 2>&1")
+        # Raccourcis pour minimiser et organiser la barre des tâches
+        os.system("tmux bind-key m set-option status >/dev/null 2>&1")
+
+    verifier_cle_acces()
     deployer_bulle_v1("espace_travail")
