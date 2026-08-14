@@ -5,7 +5,6 @@
   --> ÉDITION INTERACTIVE (SOURIS, BARRE DES TÂCHES & ANTI-EMPILEMENT)
 ===============================================================================
 """
-
 import os
 import subprocess
 import shlex
@@ -15,7 +14,44 @@ import socket
 import threading
 import time
 import hashlib
+import getpass
+import signal
 
+# Bloque le raccourci Ctrl + C pour éviter de fermer accidentellement la bulle ANOS
+def ignorer_ctrl_c(sig, frame):
+    print("\n[!] Ctrl+C est désactivé. Utilisez l'option du menu pour quitter proprement.")
+
+signal.signal(signal.SIGINT, ignorer_ctrl_c)
+def ouvrir_dans_dock(cmd_docker):
+    """Fonction universelle pour ouvrir TOUTES les applications dans la colonne de droite"""
+    if "TMUX" in os.environ:
+        # 1. Compte le nombre de fenêtres ouvertes
+        nbr_panneaux = int(subprocess.check_output(["tmux", "display-message", "-p", "#{window_panes}"]).decode().strip())
+        
+        if nbr_panneaux == 1:
+            # Si c'est la toute première fenêtre secondaire, on crée la colonne de droite (-h)
+            subprocess.run(["tmux", "split-window", "-h", "-p", "45", cmd_docker])
+        else:
+            # Si la colonne de droite existe déjà, on sélectionne le dernier volet à droite et on le coupe (-v)
+            subprocess.run(["tmux", "select-pane", "-t", "{right}"])
+            subprocess.run(["tmux", "split-window", "-v", cmd_docker])
+            
+        # 2. REVIENT SANS FAUTE SUR LE MENU PRINCIPAL (à gauche) pour qu'il ne disparaisse jamais !
+        subprocess.run(["tmux", "select-pane", "-t", ".0"])
+    else:
+        subprocess.run(cmd_docker, shell=True)
+# --- IMPORTATION DES NOUVEAUX MODULES ---
+# --- IMPORTATION DES NOUVEAUX MODULES ---
+try:
+    from modules.gov_cyber import (
+        installer_pack_outils_cyber,
+        lancer_recherche_osint,
+        telecharger_media_video,
+        lancer_navigateur_securise
+    )
+    from modules.gov_ai import installer_moteurs_ia
+except Exception as e:
+    print(f"\033[38;5;196m[!] Erreur de chargement des modules : {e}\033[0m")
 # --- Couleurs ANSI Cyberpunk ---
 GREEN     = "\033[38;5;82m"     # Vert Matrix
 CYAN      = "\033[38;5;51m"     # Neon Cyan
@@ -26,7 +62,7 @@ GRAY      = "\033[38;5;240m"    # Dark Steel
 WHITE     = "\033[1;97m"        # White Glow
 RESET     = "\033[0m"
 
-CLE_ACCES_PAR_DEFAUT = "ANOS-KEY-2026"
+CLE_ACCES_PAR_DEFAUT = "ANOS"
 
 def forcer_privileges_root():
     if os.geteuid() != 0:
@@ -56,6 +92,68 @@ def reinitialiser_panneaux():
     """Ferme toutes les fenêtres secondaires pour éviter l'empilement."""
     if os.environ.get("TMUX"):
         os.system("tmux kill-pane -a -t 0 2>/dev/null")
+
+FICHIER_CLE = "/var/tmp/.anos_user_key.hash"
+CONTACT_ARCHITECTE = "L'Architecte ANOS OS"
+
+def hacher_cle(cle):
+    """Hache la clé en SHA-256 (Sécurité souveraine : aucun mot de passe en clair)."""
+    return hashlib.sha256(cle.encode()).hexdigest()
+
+def verifier_cle_acces():
+    """Gère la création au 1er lancement, la connexion et le blocage."""
+    clear_screen()
+    afficher_logo()
+    
+    # --- 1. PREMIER LANCEMENT : L'utilisateur crée sa propre clé ---
+    if not os.path.exists(FICHIER_CLE):
+        print(f"{CYAN}╔══════════════════════════════════════════════════════════════════════════════╗")
+        print(f"║             BIENVENUE SUR ANOS OS - PREMIÈRE CONFIGURATION                   ║")
+        print(f"╚══════════════════════════════════════════════════════════════════════════════╝{RESET}\n")
+        print(f"{YELLOW}[!] Aucune clé configurée. Veuillez créer votre clé d'accès personnelle.{RESET}\n")
+        
+        while True:
+            nouvelle_cle = getpass.getpass("Choisissez votre clé d'accès (saisie masquée) : ").strip()
+            confirmation = getpass.getpass("Confirmez votre clé d'accès : ").strip()
+            
+            if nouvelle_cle == confirmation and len(nouvelle_cle) >= 4:
+                with open(FICHIER_CLE, "w") as f:
+                    f.write(hacher_cle(nouvelle_cle))
+                print(f"\n{GREEN}[✓] Clé enregistrée avec succès ! Conservez-la en mémoire.{RESET}")
+                time.sleep(1.5)
+                return True
+            else:
+                print(f"{NEON_RED}[!] Les clés ne correspondent pas ou font moins de 4 caractères.{RESET}\n")
+
+    # --- 2. CONNEXIONS SUIVANTES : Vérification de la clé créée ---
+    with open(FICHIER_CLE, "r") as f:
+        cle_enregistree = f.read().strip()
+
+    print(f"{CYAN}╔══════════════════════════════════════════════════════════════════════════════╗")
+    print(f"║                   AUTHENTIFICATION - CLÉ SOUVERAINE ANOS                     ║")
+    print(f"╚══════════════════════════════════════════════════════════════════════════════╝{RESET}\n")
+
+    tentatives = 3
+    while tentatives > 0:
+        saisie = getpass.getpass("Entrez votre clé d'accès : ").strip()
+        if hacher_cle(saisie) == cle_enregistree:
+            print(f"\n{GREEN}[✓] Clé valide. Déverrouillage du noyau ANOS OS...{RESET}")
+            time.sleep(1)
+            return True
+        else:
+            tentatives -= 1
+            print(f"{NEON_RED}[!] Clé incorrecte. Essais restants : {tentatives}{RESET}\n")
+
+    # --- 3. EN CAS D'OUBLI OU ÉCHEC : Message de sécurité vers l'Architecte ---
+    clear_screen()
+    print(f"{NEON_RED}╔══════════════════════════════════════════════════════════════════════════════╗")
+    print(f"║                  🚨 ACCÈS SÉCURISÉ BLOQUÉ - ANOS OS 🚨                      ║")
+    print(f"╠══════════════════════════════════════════════════════════════════════════════╣")
+    print(f"║ Nombre maximal de tentatives dépassé.                                        ║")
+    print(f"║ En cas d'oubli de votre clé, vous devez impérativement contacter            ║")
+    print(f"║ l'Architecte du système pour réinitialiser vos identifiants.                 ║")
+    print(f"╚══════════════════════════════════════════════════════════════════════════════╝{RESET}\n")
+    sys.exit(1)
 
 def afficher_logo():
     print(f"{PURPLE}")
@@ -618,18 +716,28 @@ def interpreter_commande_v1(texte, nom_zone):
         return f"nmap -F {paquet} 2>/dev/null || (apk add --no-cache nmap && nmap -F {paquet})"
 
     if action == "tor":
-        reinitialiser_panneaux()
-        if os.environ.get("TMUX"):
-            cmd_tor_pane = (
-                f"tmux split-window -d -h -p 38 "
-                f"\"docker exec -it {nom_zone} sh -c '"
-                f"killall tor 2>/dev/null; rm -f /var/lib/tor/lock; mkdir -p /var/lib/tor && "
-                f"echo \\\"ClientUseIPv4 1\\\" > /etc/tor/torrc && tor'\""
-            )
-            os.system(cmd_tor_pane)
-            return "SPECIAL_TOR"
+        cmd_tor = (
+            f"docker exec -it {nom_zone} sh -c "
+            f"\"killall tor 2>/dev/null; rm -f /var/lib/tor/lock; mkdir -p /var/lib/tor && "
+            f"echo 'ClientUseIPv4 1' > /etc/tor/torrc && tor\""
+        )
+        ouvrir_dans_dock(cmd_tor)
+        return "SPECIAL_TOR"
 
     return " ".join(parts[1:])
+
+def ouvrir_dans_dock(cmd_docker):
+    """Ouvre l'application à droite sans effacer le menu principal ni fermer les autres volets"""
+    if os.environ.get("TMUX"):
+        nbr_panneaux = int(subprocess.check_output(["tmux", "display-message", "-p", "#{window_panes}"]).decode().strip())
+        if nbr_panneaux == 1:
+            subprocess.run(["tmux", "split-window", "-h", "-p", "40", cmd_docker])
+        else:
+            subprocess.run(["tmux", "select-pane", "-t", "{right}"])
+            subprocess.run(["tmux", "split-window", "-v", cmd_docker])
+        subprocess.run(["tmux", "select-pane", "-t", ".0"])
+    else:
+        subprocess.run(cmd_docker, shell=True)
 
 def lancer_mode_cli_v1(nom_zone):
     clear_screen()
@@ -674,25 +782,26 @@ def lancer_os_principal(nom_zone):
         clear_screen()
         afficher_logo()
         afficher_tableau_de_bord(nom_zone)
-        print(f"{CYAN}╔══════════════════════════════════════════════════════════════════════════════╗")
-        print(f"║                      MENU PRINCIPAL - ANOS OS v5.0                           ║")
-        print(f"╠══════════════════════════════════════════════════════════════════════════════╣")
-        print(f"║  {GREEN}[1]{WHITE} TERMINAL SÉCURISÉ      - Console d'accès (Fix TTY & Anti-Déformation)    ║")
-        print(f"║  {GREEN}[2]{WHITE} CHAT P2P DIRECT        - Messagerie chiffrée directe (Style WhatsApp)   ║")
-        print(f"║  {GREEN}[3]{WHITE} ESPACE DÉVELOPPEUR     - Studio Python, JS, C/C++ & Fenêtre Latérale    ║")
-        print(f"║  {GREEN}[4]{WHITE} HTML / CSS WEB STUDIO  - Éditeur avec APERÇU EN DIRECT DU SITE          ║")
-        print(f"║  {GREEN}[5]{WHITE} CONFIGURATION RAM      - Centre de diagnostic & Turbo Boost RAM (8 opts)║")
-        print(f"║  {GREEN}[6]{WHITE} STORE DE PAQUETS       - Magasin d'outils Cyber & Développement         ║")
-        print(f"║  {GREEN}[7]{WHITE} ANONYMAT TOR           - Panneau latéral Tor                            ║")
-        print(f"║  {GREEN}[8]{WHITE} SCANNER RÉSEAU         - Audit Nmap, détection de ports & hôtes         ║")
-        print(f"║  {GREEN}[9]{WHITE} DESTRUCTEUR FICHIERS   - Nettoyage sécurisé & broyage d'entropie        ║")
-        print(f"║  {YELLOW}[11]{WHITE} ACCÈS FICHIERS TOR    - Transfert & Importation Anonyme via relais Tor  ║")
-        print(f"║  {CYAN}[12]{WHITE} DEEP RECHERCHE         - Recherche Anonyme Web & Google via réseau Tor   ║")
-        print(f"║  {NEON_RED}[10] NUKE D'URGENCE         - Effacement immédiat de la RAM et arrêt         ║")
-        print(f"║                                                                              ║")
-        print(f"║  {NEON_RED}[0]{WHITE} ÉTEINDRE / DÉSINTEGRER  - Fermer proprement la bulle RAM                  ║")
-        print(f"╚══════════════════════════════════════════════════════════════════════════════╝{RESET}")
-        
+        print(f"{CYAN}┌────────────────────────────────────────────────────────────────────────────┐")
+        print(f"│                        MENU PRINCIPAL - ANOS OS v5.0                      │")
+        print(f"├────────────────────────────────────────────────────────────────────────────┤")
+        print(f"│ {GREEN}[1]{WHITE} TERMINAL SÉCURISÉ      - Console d'accès (Fix TTY & Anti-Déformation)   │")
+        print(f"│ {GREEN}[2]{WHITE} CHAT P2P DIRECT        - Messagerie chiffrée directe (Style WhatsApp) │")
+        print(f"│ {GREEN}[3]{WHITE} ESPACE DÉVELOPPEUR     - Studio Python, JS, C/C++ & Fenêtre Latérale  │")
+        print(f"│ {GREEN}[4]{WHITE} HTML / CSS WEB STUDIO  - Éditeur avec APERÇU EN DIRECT DU SITE        │")
+        print(f"│ {GREEN}[5]{WHITE} CONFIGURATION RAM      - Centre de diagnostic & Turbo Boost RAM       │")
+        print(f"│ {GREEN}[6]{WHITE} STORE DE PAQUETS       - Magasin d'outils Cyber & Développement       │")
+        print(f"│ {GREEN}[7]{WHITE} ANONYMAT TOR           - Panneau latéral Tor                          │")
+        print(f"│ {GREEN}[8]{WHITE} SCANNER RÉSEAU         - Audit Nmap, détection de ports & hôtes       │")
+        print(f"│ {GREEN}[9]{WHITE} DESTRUCTEUR FICHIERS   - Nettoyage sécurisé & broyage d'entropie      │")
+        print(f"│ {YELLOW}[11]{WHITE} ACCÈS FICHIERS TOR   - Transfert & Importation Anonyme via relais    │")
+        print(f"│ {CYAN}[12]{WHITE} DEEP RECHERCHE        - Recherche Anonyme Web & Google via Tor       │")
+        print(f"│ {GREEN}[13]{WHITE} MODULES GOUVERNEMENTAL - Cyber, Pentest, IA, Vision & Média          │")
+        print(f"│ {GREEN}[14]{WHITE} MODIFIER CLÉ D'ACCÈS   - Sécurité & Gestion du mot de passe           │")
+        print(f"│ {NEON_RED}[10] NUKE D'URGENCE       - Effacement immédiat de la RAM et arrêt       │")
+        print(f"├────────────────────────────────────────────────────────────────────────────┤")
+        print(f"│ {NEON_RED}[0]{WHITE} ÉTEINDRE / DÉSINTÉGRER  - Fermer proprement la bulle RAM               │")
+        print(f"└────────────────────────────────────────────────────────────────────────────┘{RESET}")        
         choice = input(f"\n{CYAN}ANOS-MAIN-PROMPT > {RESET}").strip()
         
         if choice == '1':
@@ -726,7 +835,38 @@ def lancer_os_principal(nom_zone):
         elif choice == '11':
             explorer_et_importer_fichiers(nom_zone)
         elif choice == '12':
-            lancer_deep_recherche(nom_zone)
+             lancer_deep_recherche(nom_zone)
+        elif choice == '13':
+            clear_screen()
+            print(f"{CYAN}==========================================================================")
+            print("                   MODULES SOUVERAINS & GOUVERNEMENTAUX")
+            print(f"=========================================================================={RESET}\n")
+            print("  [1] Installer Suite Cyber & Pentest")
+            print("  [2] Lancer Recherche OSINT")
+            print("  [3] Installer Moteurs IA & OCR")
+            print("  [4] Télécharger Média / Vidéo")
+            print("  [5] Navigateur Texte Sécurisé (W3M)")
+            print("  [0] Retour au Menu Principal")
+
+            sub_c = input(f"\n[>] Choix : ").strip()
+
+            try:
+               if sub_c == '1':
+                   installer_pack_outils_cyber(nom_zone)
+               elif sub_c == '2':
+                   lancer_recherche_osint(nom_zone)
+               elif sub_c == '3':
+                   installer_moteurs_ia(nom_zone)
+               elif sub_c == '4':
+                   telecharger_media_video(nom_zone)
+               elif sub_c == '5':
+                   lancer_navigateur_securise(nom_zone)
+            except NameError as e:
+               print(f"\n{NEON_RED}[!] Erreur de fonction manquante : {e}{RESET}")
+               input("\nAppuyez sur Entrée pour continuer...")
+
+        elif choice == '14':
+            modifier_cle_utilisateur()
         elif choice == '10':
             urgence_nuke_systeme(nom_zone)
         elif choice == '0':
@@ -757,13 +897,45 @@ def deployer_bulle_v1(nom_zone):
     except Exception as e:
         print(f"[-] Erreur : {e}")
 
+def modifier_cle_utilisateur():
+    """Permet à l'utilisateur de modifier sa clé s'il connaît la clé actuelle."""
+    if not os.path.exists(FICHIER_CLE):
+        print(f"{NEON_RED}[!] Aucune clé n'est configurée.{RESET}")
+        time.sleep(1.5)
+        return
+
+    with open(FICHIER_CLE, "r") as f:
+        cle_actuelle_hash = f.read().strip()
+
+    clear_screen()
+    print(f"{CYAN}╔══════════════════════════════════════════════════════════════════════════════╗")
+    print(f"║                    MODIFICATION DE LA CLÉ D'ACCÈS ANOS                       ║")
+    print(f"╚══════════════════════════════════════════════════════════════════════════════╝{RESET}\n")
+
+    ancienne = getpass.getpass("Entrez votre clé ACTUELLE : ").strip()
+
+    # Vérification de l'ancienne clé
+    if hacher_cle(ancienne) != cle_actuelle_hash:
+        print(f"\n{NEON_RED}[❌] Clé actuelle incorrecte. Modification annulée.{RESET}")
+        input("\nAppuyez sur Entrée pour continuer...")
+        return
+
+    # Saisie de la nouvelle clé
+    nouvelle = getpass.getpass("Entrez votre NOUVELLE clé : ").strip()
+    confirm = getpass.getpass("Confirmez votre NOUVELLE clé : ").strip()
+
+    if nouvelle == confirm and len(nouvelle) >= 4:
+        with open(FICHIER_CLE, "w") as f:
+            f.write(hacher_cle(nouvelle))
+        print(f"\n{GREEN}[✓] Votre clé d'accès a été modifiée avec succès !{RESET}")
+    else:
+        print(f"\n{NEON_RED}[❌] Les clés ne correspondent pas ou font moins de 4 caractères.{RESET}")
+
+    input("\nAppuyez sur Entrée pour continuer...")
 if __name__ == "__main__":
-    forcer_privileges_root()
-    verifier_et_activer_tmux()
-    
-    # --- ACTIVATION DU MODE BUREAU INTERACTIF & BARRE DES TÂCHES INTELLIGENTE ---
     if os.environ.get("TMUX"):
-        os.system("tmux set-option -g mouse on >/dev/null 2>&1")
+        # Activer la souris pour cliquer/glisser sur les fenêtres
+        os.system("tmux set -g mouse on >/dev/null 2>&1")    # --- ACTIVATION DU MODE BUREAU INTERACTIF & BARRE DES TÂCHES INTELLIGENTE ---
         os.system("tmux set-option -g status on >/dev/null 2>&1")
         os.system("tmux set-option -g status-position bottom >/dev/null 2>&1")
         os.system("tmux set-option -g status-style bg=black,fg=green >/dev/null 2>&1")
@@ -772,4 +944,21 @@ if __name__ == "__main__":
         os.system("tmux bind-key m set-option status >/dev/null 2>&1")
 
     verifier_cle_acces()
-    deployer_bulle_v1("espace_travail")
+    nom_zone = "anos_container"
+    try:
+        creer_ou_verifier_bulle_ram(nom_zone)
+    except Exception as e:
+        pass
+
+    print(f"\n{CYAN}[*] Démarrage de la bulle RAM sécurisée ({nom_zone})...{RESET}")
+    cmd_docker = [
+        "docker", "run", "-d", "--rm",
+        "--cap-add=NET_ADMIN",
+        "--tmpfs", "/tmp:rw,size=1G,mode=1777",
+        "--name", nom_zone,
+        "anos-custom:v1",
+         "tail", "-f", "/dev/null"
+    ]
+    subprocess.run(cmd_docker, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    time.sleep(1) 
+    lancer_os_principal(nom_zone)
